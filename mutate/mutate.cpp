@@ -6,15 +6,17 @@
 #include <vector>
 #include <ctime> // Include the <ctime> header for time functions
 
+//define namespace std 
+using namespace std;
 
-std::string mutate(const std::string &sequence, const std::map<char, double> &probs)
+string mutate(const string &sequence, const map<char, double> &probs)
 {
-    std::string mutated_sequence = "";
+    string mutated_sequence = "";
     for (char l : sequence)
     {
-        if (std::rand() / (RAND_MAX + 1.0) > probs.at(l))
+        if (rand() / (RAND_MAX + 1.0) < probs.at(l))
         {
-            std::vector<char> keys;
+            vector<char> keys;
             for (const auto &pair : probs)
             {
                 if (pair.first != l)
@@ -22,7 +24,7 @@ std::string mutate(const std::string &sequence, const std::map<char, double> &pr
                     keys.push_back(pair.first);
                 }
             }
-            mutated_sequence += keys[std::rand() % keys.size()];
+            mutated_sequence += keys[rand() % keys.size()];
         }
         else
         {
@@ -34,23 +36,23 @@ std::string mutate(const std::string &sequence, const std::map<char, double> &pr
 
 int main()
 {
-    std::map<char, double> probs = {{'A', 0.25}, {'C', 0.25}, {'G', 0.25}, {'T', 0.25}};
+    map<char, double> probs = {{'A', 0.25}, {'C', 0.25}, {'G', 0.25}, {'T', 0.25}};
 
-    std::srand(static_cast<unsigned int>(std::time(nullptr)));
+    srand(static_cast<unsigned int>(time(nullptr)));
 
     // Read the input sequence
-    std::ifstream infile("data.txt");
-    std::string sequence;
+    ifstream infile("data.txt");
+    string sequence;
     infile >> sequence;
     infile.close();
 
     // Convert to uppercase
     for (char &c : sequence)
     {
-        c = std::toupper(c);
+        c = toupper(c);
     }
 
-    std::cout << "Original sequence: " << sequence << std::endl;
+    cout << "Original sequence: " << sequence << endl;
 
     for (char l : sequence)
     {
@@ -61,9 +63,9 @@ int main()
     }
 
     // Mutate the sequence
-    std::string mutated_sequence = mutate(sequence, probs);
+    string mutated_sequence = mutate(sequence, probs);
 
-    std::cout << "Mutated sequence: " << mutated_sequence << std::endl;
+    cout << "Mutated sequence: " << mutated_sequence << endl;
 
     return 0;
 }
