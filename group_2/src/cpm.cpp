@@ -7,7 +7,6 @@
 
 using namespace std;
 
-
 int main(int argc, char *argv[])
 {
 
@@ -15,11 +14,14 @@ int main(int argc, char *argv[])
     int k;
     double threshold;
 
-    unsigned int totalsize = 0;
+    unsigned int totalBits = 0;
     unsigned int fileSize = 0;
 
     Table table;
     Alphabet alphabet;
+
+    // for 1 CopyModel
+    CopyModel copyModel;
 
     if (argc < 4)
     {
@@ -58,8 +60,10 @@ int main(int argc, char *argv[])
     {
         alphabet.add(data[i]);
     }
+    alphabet.loadCharMap();
 
-    // Browse the data
+    FallbackModel fallbackModel(k, alphabet);
+
     char c;
     char kmer[k];
     // fill kmer with th first character
@@ -67,6 +71,7 @@ int main(int argc, char *argv[])
     {
         kmer[i] = data[0];
     }
+
     int j;
     for (i = 1; i < fileSize; i++)
     {
@@ -75,9 +80,29 @@ int main(int argc, char *argv[])
             kmer[j] = kmer[j + 1];
         }
         kmer[k - 1] = data[i - 1];
-        // check if the kmer is in the table
-        // if kmer is not in the table, use fallback and insert the kmer in the table
-        // else update the table and use copymodel
+
+        if (table.contains(kmer))
+        {
+            if (copyModel.match(kmer, data[i]))
+            {
+                if (copyModel.thresholdReached())
+                {
+                    copyModel.resetModel();
+                    table.advancePosition(kmer);
+                }
+                else
+                {
+                    totalBits += copyModel.calcBits();
+                    copyModel.predict(data[i]);
+                
+                    table.insert(kmer, i);
+                    continue;
+                }
+            }
+        }
+        totalBits += fallbackModel.calcBits(kmer);
+        table.insert(kmer, i);
     }
     
+    cout << "Total bits: " << totalBits << endl;
 }

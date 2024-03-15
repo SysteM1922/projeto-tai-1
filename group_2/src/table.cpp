@@ -61,14 +61,14 @@ struct Table
         }
     }
 
-    unsigned int getCurrentPosition(char* key)
-    {
-        return table[key].getPosition();
-    }
-
-    int contains(char* key)
+    bool contains(char* key)
     {
         return table.find(key) != table.end();
+    }
+
+    void advancePosition(char* key)
+    {
+        table[key].advancePosition();
     }
 
 };
