@@ -56,7 +56,7 @@ struct CopyModel {
 
     void resetModel() {
         this->kmer = NULL;
-        this->prediction = NULL;
+        this->prediction = 0;
         this->nHits = 0;
         this->nTries = 0;
     }

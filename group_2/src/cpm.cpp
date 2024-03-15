@@ -14,8 +14,8 @@ int main(int argc, char *argv[])
     int k;
     double threshold;
 
-    unsigned int totalBits = 0;
-    unsigned int fileSize = 0;
+    int totalBits = 0;
+    int fileSize = 0;
 
     Table table;
     Alphabet alphabet;
@@ -51,7 +51,11 @@ int main(int argc, char *argv[])
         cerr << "Error allocating memory for input file." << endl;
         return 1;
     }
-    fread(data, sizeof(char), fileSize, inputfile);
+    if (static_cast<int>(fread(data, sizeof(char), fileSize, inputfile)) != fileSize)
+    {
+        cerr << "Error reading input file." << endl;
+        return 1;
+    }
     fclose(inputfile);
 
     // Compute the alphabet
@@ -64,7 +68,6 @@ int main(int argc, char *argv[])
 
     FallbackModel fallbackModel(k, alphabet);
 
-    char c;
     char kmer[k];
     // fill kmer with th first character
     for (i = 0; i < k; i++)

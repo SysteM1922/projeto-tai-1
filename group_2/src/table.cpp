@@ -5,35 +5,34 @@ using namespace std;
 
 struct Value
 {
-    unsigned int position;
-    vector<unsigned int> values;
+    int position;
+    vector<int> values;
 
-    Value(unsigned int position, unsigned int value)
-    {
-        this->position = position;
-        this->values.push_back(value);
-    }
-
-    void addValue(unsigned int value)
+    Value(int position, int value) : position(position)
     {
         values.push_back(value);
     }
-    
+
+    void addValue(int value)
+    {
+        values.push_back(value);
+    }
+
     int getSize()
     {
         return values.size();
     }
 
-    unsigned int getPosition()
+    int getPosition()
     {
-        if (position >= values.size())
+        if (position >= static_cast<int>(values.size()))
         {
             return -1;
         }
         return values[position];
     }
 
-    vector<unsigned int> getValues()
+    vector<int> getValues()
     {
         return values;
     }
@@ -47,9 +46,9 @@ struct Value
 struct Table
 {
     // map char array to Value
-    map<char*, Value> table;
+    map<char *, Value> table;
 
-    void insert(char* key, unsigned int value)
+    void insert(char *key, int value)
     {
         if (table.find(key) == table.end())
         {
@@ -61,14 +60,13 @@ struct Table
         }
     }
 
-    bool contains(char* key)
+    bool contains(char *key)
     {
         return table.find(key) != table.end();
     }
 
-    void advancePosition(char* key)
+    void advancePosition(char *key)
     {
         table[key].advancePosition();
     }
-
 };
