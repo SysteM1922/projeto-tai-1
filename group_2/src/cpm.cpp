@@ -13,7 +13,7 @@ int main(int argc, char *argv[])
 
     FILE *inputfile;
     int k;
-    int threshold;
+    double threshold;
 
     unsigned int totalsize = 0;
     unsigned int fileSize = 0;
@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
     }
 
     k = atoi(argv[2]);
-    threshold = atoi(argv[3]);
+    threshold = atof(argv[3]);
 
     // Get the size of the file
     fseek(inputfile, 0, SEEK_END);
@@ -62,25 +62,19 @@ int main(int argc, char *argv[])
     // Browse the data
     char c;
     char kmer[k];
+    // fill kmer with th first character
+    for (i = 0; i < k; i++)
+    {
+        kmer[i] = data[0];
+    }
     int j;
     for (i = 1; i < fileSize; i++)
     {
-        // while there aren't k characters to fill the kmer array fill it with the first character
-        j = 0;
-        if (i < k + 1)
+        for (j = 0; j < k - 1; j++)
         {
-            while (j < k - i)
-            {
-                kmer[j] = data[0];
-                j++;
-            }
+            kmer[j] = kmer[j + 1];
         }
-        // fill the kmer array with the previous k characters
-        while (j < k)
-        {
-            kmer[j] = data[i - k + j];
-            j++;
-        }
+        kmer[k - 1] = data[i - 1];
         // check if the kmer is in the table
         // if kmer is not in the table, use fallback and insert the kmer in the table
         // else update the table and use copymodel

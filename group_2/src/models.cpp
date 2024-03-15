@@ -15,7 +15,7 @@ struct Alphabet {
 };
 
 struct RepeatModel {
-    RepeatModel(int pos, double alpha) : pos(pos) {}
+    RepeatModel(int pos, double threshold) : pos(pos), threshold(threshold) {}
 
     double calcProb() {
         return (nHits + ALPHA) / (nTries + ALPHA * 2);
@@ -26,6 +26,12 @@ struct RepeatModel {
     }
 
     int pos;
+    double threshold;
     int nHits = 0;
     int nTries = 0;
+};
+
+struct CopyModel {
+
+    char *kmer;
 };
