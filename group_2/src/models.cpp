@@ -2,6 +2,7 @@
 #include <set>
 #include <cstring>
 #include <map>
+#include <iostream>
 
 #include "cpm.h"
 
@@ -18,28 +19,39 @@ struct Alphabet {
     }
 
     void loadCharMap() {
-        map<char, int> charMap;
         for (char c : alphabet) {
             charMap[c] = 0;
         }
         this->charMap = charMap;
     }
 
-    map<char, int> getCharMap() {
+    map<char, double> getCharMap() {
         return charMap;
     }
     
     set<char> alphabet;
-    map<char, int> charMap;
+    map<char, double> charMap;
 };
 
 struct CopyModel {
+
+    char *kmer = NULL;
+    char prediction = 0;
+    double nHits = 0;
+    int nTries = 0;
+    int minTries;
+    double threshold;
+
+    CopyModel(double threshold, int minTries) {
+        this->threshold = threshold;
+        this->minTries = minTries;
+    }
 
     double calcProb() {
         return (nHits + ALPHA) / (nTries + ALPHA * 2);
     }
 
-    int calcBits() {
+    double calcBits() {
         return -log2(calcProb());
     }
 
@@ -61,30 +73,27 @@ struct CopyModel {
         this->nTries = 0;
     }
 
-    bool match(char *kmer, char prediction) {
-        if (this->kmer == NULL) {
-            addKmer(kmer, prediction);
-            return true;
-        }
-        return strcmp(this->kmer, kmer) == 0;
+    bool match(char *kmer) {
+        return this->kmer != NULL && strcmp(this->kmer, kmer) == 0;
+    }
+
+    bool isNull() {
+        return this->kmer == NULL;
     }
 
     void predict(char prediction) {
         if (prediction == this->prediction) {
-            nHits++;
+            this->nHits++;
         }
-        nTries++;
+        this->nTries++;
     }
 
-    char *kmer;
-    char prediction;
-    int nHits = 0;
-    int nTries = 0;
-    int minTries;
-    int threshold;
 };
 
 struct FallbackModel {
+    
+    int k;
+    Alphabet alphabet;
 
     FallbackModel(int k, Alphabet alphabet) {
         this->k = k;
@@ -94,18 +103,18 @@ struct FallbackModel {
     double calcBits(char *kmer) {
         // calc relative frequency of each char in the kmer
         int i;
-        map<char, int> counts = this->alphabet.getCharMap();
+        map<char, double> counts = this->alphabet.getCharMap();
         for (i = 0; i < k; i++) {
             counts[kmer[i]]++;
         }
         // calc probability
         double prob = 0;
         for (auto const& [c, count] : counts) {
+            if (count == 0) {
+                continue;
+            }
             prob += -log2(count / k) * (count / k);
         }
         return prob;
     }
-
-    int k;
-    Alphabet alphabet;
 };

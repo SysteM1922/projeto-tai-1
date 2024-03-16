@@ -1,4 +1,5 @@
 #include <iostream>
+#include <chrono>
 #include <fstream>
 #include <cmath>
 #include "table.cpp"
@@ -6,6 +7,7 @@
 #include "cpm.h"
 
 using namespace std;
+using namespace std::chrono;
 
 int main(int argc, char *argv[])
 {
@@ -13,15 +15,13 @@ int main(int argc, char *argv[])
     FILE *inputfile;
     int k;
     double threshold;
+    int minTries;
 
-    int totalBits = 0;
+    double totalBits = 0;
     int fileSize = 0;
 
     Table table;
     Alphabet alphabet;
-
-    // for 1 CopyModel
-    CopyModel copyModel;
 
     if (argc < 4)
     {
@@ -37,7 +37,13 @@ int main(int argc, char *argv[])
     }
 
     k = atoi(argv[2]);
-    threshold = atof(argv[3]);
+    // threshold is in format <minTries>/<threshold>
+    sscanf(argv[3], "%d/%lf", &minTries, &threshold);
+    // for 1 CopyModel
+    CopyModel copyModel = CopyModel(threshold, minTries);
+
+    // start the timer
+    auto start = high_resolution_clock::now();
 
     // Get the size of the file
     fseek(inputfile, 0, SEEK_END);
@@ -86,7 +92,7 @@ int main(int argc, char *argv[])
 
         if (table.contains(kmer))
         {
-            if (copyModel.match(kmer, data[i]))
+            if (copyModel.match(kmer))
             {
                 if (copyModel.thresholdReached())
                 {
@@ -102,10 +108,33 @@ int main(int argc, char *argv[])
                     continue;
                 }
             }
+            else if (copyModel.isNull())
+            {
+                copyModel.addKmer(kmer, data[table.getPosition(kmer)]);
+                totalBits += copyModel.calcBits();
+                copyModel.predict(data[i]);
+                table.insert(kmer, i);
+                continue;
+            }
         }
         totalBits += fallbackModel.calcBits(kmer);
         table.insert(kmer, i);
     }
+
+    auto stop = high_resolution_clock::now();
+    auto duration = duration_cast<microseconds>(stop - start);
     
-    cout << "Total bits: " << totalBits << endl;
+    cout << "File: " << argv[1] << endl;
+    cout << "k: " << k << endl;
+    cout << "Threshold: " << threshold << endl;
+    cout << "MinTries: " << minTries << endl;
+    cout << "File size (Bases): " << fileSize << endl;
+    cout << "Alphabet size: " << alphabet.size() << endl;
+    cout << "Total bytes (B): " << (int)(totalBits / 8) << endl;
+    cout << "Bits per base: " << (double)totalBits / fileSize << endl;
+    cout << "Time (s): " << duration.count() / 1000000.0 << endl;
+
+    free(data);
+
+    return 0;
 }

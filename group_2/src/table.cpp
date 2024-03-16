@@ -5,10 +5,12 @@ using namespace std;
 
 struct Value
 {
-    int position;
+    int idx = 0;
     vector<int> values;
 
-    Value(int position, int value) : position(position)
+    Value() {}
+
+    Value(int value)
     {
         values.push_back(value);
     }
@@ -25,11 +27,11 @@ struct Value
 
     int getPosition()
     {
-        if (position >= static_cast<int>(values.size()))
+        if (idx >= static_cast<int>(values.size()))
         {
             return -1;
         }
-        return values[position];
+        return values[idx];
     }
 
     vector<int> getValues()
@@ -39,7 +41,7 @@ struct Value
 
     void advancePosition()
     {
-        position++;
+        idx++;
     }
 };
 
@@ -52,7 +54,7 @@ struct Table
     {
         if (table.find(key) == table.end())
         {
-            table[key] = Value(0, value);
+            table[key] = Value(value);
         }
         else
         {
@@ -68,5 +70,10 @@ struct Table
     void advancePosition(char *key)
     {
         table[key].advancePosition();
+    }
+
+    int getPosition(char *key)
+    {
+        return table[key].getPosition();
     }
 };
