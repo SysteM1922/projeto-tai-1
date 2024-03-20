@@ -1,71 +1,107 @@
 #include <iostream>
 #include <fstream>
-#include <string>
-#include <map>
-#include <cstdlib>
-#include <vector>
-#include <ctime> // Include the <ctime> header for time functions
+#include <sstream>
+#include <unistd.h> // for getopt
+#include <unordered_set>
+#include <cstdlib> // for rand() and srand()
+#include <ctime>   // for time()
 
-//define namespace std 
 using namespace std;
 
-string mutate(const string &sequence, const map<char, double> &probs)
-{
-    string mutated_sequence = "";
-    for (char l : sequence)
-    {
-        if (rand() / (RAND_MAX + 1.0) < probs.at(l))
-        {
-            vector<char> keys;
-            for (const auto &pair : probs)
-            {
-                if (pair.first != l)
-                {
-                    keys.push_back(pair.first);
-                }
-            }
-            mutated_sequence += keys[rand() % keys.size()];
-        }
-        else
-        {
-            mutated_sequence += l;
-        }
+// Function to perform mutation on a character based on probability and distinct letters
+char mutateCharacter(char ch, double probability, const unordered_set<char>& letters) {
+    // Generate a random value between 0 and 1
+    double randomValue = (double)rand() / RAND_MAX;
+
+    // If the random value is greater than the probability, replace the current character
+    if (randomValue > probability) {
+        // Select a random letter from the set of unique letters
+        int randomIndex = rand() % letters.size();
+        auto it = letters.begin();
+        advance(it, randomIndex);
+        return *it;
     }
-    return mutated_sequence;
+
+    return ch; // If no mutation, return the original character
 }
 
-int main()
-{
-    map<char, double> probs = {{'A', 0.25}, {'C', 0.25}, {'G', 0.25}, {'T', 0.25}};
+int main(int argc, char* argv[]) {
+    string inputFileName;
+    string outputFileName;
+    double probability = 0;
 
-    srand(static_cast<unsigned int>(time(nullptr)));
-
-    // Read the input sequence
-    ifstream infile("data.txt");
-    string sequence;
-    infile >> sequence;
-    infile.close();
-
-    // Convert to uppercase
-    for (char &c : sequence)
-    {
-        c = toupper(c);
-    }
-
-    cout << "Original sequence: " << sequence << endl;
-
-    for (char l : sequence)
-    {
-        if (probs.find(l) == probs.end())
-        {
-            probs[l] = 0.0;
+    int opt;
+    while ((opt = getopt(argc, argv, "i:o:p:")) != -1) {
+        switch (opt) {
+            case 'i':
+                inputFileName = optarg;
+                break;
+            case 'o':
+                outputFileName = optarg;
+                break;
+            case 'p':
+                probability = stod(optarg);
+                break;
+            default:
+                cerr << "Usage: " << argv[0] << " -i inputFileName -o outputFileName -p probability\n";
+                return 1;
         }
     }
 
-    // Mutate the sequence
-    string mutated_sequence = mutate(sequence, probs);
+    // Check if input file, output file, and probability are provided
+    if (inputFileName.empty() || outputFileName.empty() || probability == 0) {
+        cerr << "Usage: " << argv[0] << " -i input_file -o output_file -p probability\n";
+        return 1;
+    }
 
-    cout << "Mutated sequence: " << mutated_sequence << endl;
+    // Check if the probability is in the valid range (0 to 1)
+    if (probability < 0 || probability > 1) {
+        cerr << "Probability must be between 0 and 1.\n";
+        return 1;
+    }
+
+    // Open the input file
+    ifstream inputFile(inputFileName);
+    if (!inputFile) {
+        cerr << "Error: cannot open " << inputFileName << endl;
+        return 1;
+    }
+
+    // Unordered set to store the unique letters in the input file
+    unordered_set<char> letters;
+
+    // Read the input file character by character and populate the set of unique letters
+    char ch;
+    while (inputFile.get(ch)) {
+        letters.insert(ch);
+    }
+
+    // Reset the file pointer to the beginning of the file
+    inputFile.clear(); // Clear any error flags
+    inputFile.seekg(0, ios::beg); // Move file pointer to the beginning
+
+    // Seed the random number generator with current time
+    srand(time(nullptr));
+
+    // Open the output file
+    ofstream outputFile(outputFileName);
+    if (!outputFile) {
+        cerr << "Error: cannot create " << outputFileName << endl;
+        return 1;
+    }
+
+    // Read the input file character by character and perform mutation
+    while (inputFile.get(ch)) {
+        // Mutate the character
+        ch = mutateCharacter(ch, probability, letters);
+        
+        // Write the mutated character to the output file
+        outputFile << ch;
+    }
+
+    // Close the input and output files
+    inputFile.close();
+    outputFile.close();
 
     return 0;
 }
