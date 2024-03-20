@@ -14,7 +14,7 @@ char mutateCharacter(char ch, double probability, const unordered_set<char>& let
     double randomValue = (double)rand() / RAND_MAX;
 
     // If the random value is greater than the probability, replace the current character
-    if (randomValue > probability) {
+    if (randomValue < probability) {
         // Select a random letter from the set of unique letters
         int randomIndex = rand() % letters.size();
         auto it = letters.begin();
