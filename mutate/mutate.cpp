@@ -2,14 +2,14 @@
 #include <fstream>
 #include <sstream>
 #include <unistd.h> // for getopt
-#include <unordered_set>
+#include <set>
 #include <cstdlib> // for rand() and srand()
 #include <ctime>   // for time()
 
 using namespace std;
 
 // Function to perform mutation on a character based on probability and distinct letters
-char mutateCharacter(char ch, double probability, const unordered_set<char>& letters) {
+char mutateCharacter(char ch, double probability, const set<char>& letters) {
     // Generate a random value between 0 and 1
     double randomValue = (double)rand() / RAND_MAX;
 
@@ -68,7 +68,7 @@ int main(int argc, char* argv[]) {
     }
 
     // Unordered set to store the unique letters in the input file
-    unordered_set<char> letters;
+    set<char> letters;
 
     // Read the input file character by character and populate the set of unique letters
     char ch;
