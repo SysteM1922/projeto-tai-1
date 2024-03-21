@@ -39,8 +39,6 @@ int main(int argc, char *argv[])
     k = atoi(argv[2]);
     // threshold is in format <minTries>/<threshold>
     sscanf(argv[3], "%d/%lf", &minTries, &threshold);
-    // for 1 CopyModel
-    CopyModel copyModel = CopyModel(threshold, minTries);
 
     // start the timer
     auto start = high_resolution_clock::now();
@@ -73,6 +71,9 @@ int main(int argc, char *argv[])
     alphabet.loadCharMap();
 
     FallbackModel fallbackModel(k, alphabet);
+    
+    // for 1 CopyModel
+    CopyModel copyModel = CopyModel(threshold, minTries, alphabet.size());
 
     char kmer[k];
     // fill kmer with th first character
@@ -101,8 +102,7 @@ int main(int argc, char *argv[])
                 }
                 else
                 {
-                    totalBits += copyModel.calcBits();
-                    copyModel.predict(data[i]);
+                    totalBits += copyModel.predict(data[i]);
                 
                     table.insert(kmer, i);
                     continue;
@@ -111,8 +111,7 @@ int main(int argc, char *argv[])
             else if (copyModel.isNull())
             {
                 copyModel.addKmer(kmer, data[table.getPosition(kmer)]);
-                totalBits += copyModel.calcBits();
-                copyModel.predict(data[i]);
+                totalBits += copyModel.predict(data[i]);
                 table.insert(kmer, i);
                 continue;
             }

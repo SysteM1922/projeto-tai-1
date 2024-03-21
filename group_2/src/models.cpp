@@ -8,32 +8,39 @@
 
 using namespace std;
 
-struct Alphabet {
+struct Alphabet
+{
 
-    void add(char c) {
+    void add(char c)
+    {
         alphabet.insert(c);
     }
 
-    int size() {
+    int size()
+    {
         return alphabet.size();
     }
 
-    void loadCharMap() {
-        for (char c : alphabet) {
+    void loadCharMap()
+    {
+        for (char c : alphabet)
+        {
             charMap[c] = 0;
         }
         this->charMap = charMap;
     }
 
-    map<char, double> getCharMap() {
+    map<char, double> getCharMap()
+    {
         return charMap;
     }
-    
+
     set<char> alphabet;
     map<char, double> charMap;
 };
 
-struct CopyModel {
+struct CopyModel
+{
 
     char *kmer = NULL;
     char prediction = 0;
@@ -41,76 +48,99 @@ struct CopyModel {
     int nTries = 0;
     int minTries;
     double threshold;
+    int alphabetSize;
 
-    CopyModel(double threshold, int minTries) {
+    CopyModel(double threshold, int minTries, int alphabetSize)
+    {
         this->threshold = threshold;
         this->minTries = minTries;
+        this->alphabetSize = alphabetSize;
     }
 
-    double calcProb() {
+    double calcProb()
+    {
         return (nHits + ALPHA) / (nTries + ALPHA * 2);
     }
 
-    double calcBits() {
+    double calcBits()
+    {
         return -log2(calcProb());
     }
 
-    bool thresholdReached() {
+    bool thresholdReached()
+    {
         return nTries > minTries && nHits / nTries < threshold;
     }
 
-    void addKmer(char *kmer, char prediction) {
+    void addKmer(char *kmer, char prediction)
+    {
         this->kmer = kmer;
         this->prediction = prediction;
         this->nHits = 0;
         this->nTries = 0;
     }
 
-    void resetModel() {
+    void resetModel()
+    {
         this->kmer = NULL;
         this->prediction = 0;
         this->nHits = 0;
         this->nTries = 0;
     }
 
-    bool match(char *kmer) {
+    bool match(char *kmer)
+    {
         return this->kmer != NULL && strcmp(this->kmer, kmer) == 0;
     }
 
-    bool isNull() {
+    bool isNull()
+    {
         return this->kmer == NULL;
     }
 
-    void predict(char prediction) {
-        if (prediction == this->prediction) {
+    double predict(char prediction)
+    {
+        if (prediction == this->prediction)
+        {
             this->nHits++;
+            this->nTries++;
+            return calcBits();
         }
-        this->nTries++;
+        else
+        {
+            this->nTries++;
+            return -log2((1-calcProb()) / (alphabetSize-1));
+        }
     }
-
 };
 
-struct FallbackModel {
-    
+struct FallbackModel
+{
+
     int k;
     Alphabet alphabet;
 
-    FallbackModel(int k, Alphabet alphabet) {
+    FallbackModel(int k, Alphabet alphabet)
+    {
         this->k = k;
         this->alphabet = alphabet;
     }
 
-    double calcBits(char *kmer) {
+    double calcBits(char *kmer)
+    {
         // calc relative frequency of each char in the kmer
         int i;
         map<char, double> counts = this->alphabet.getCharMap();
-        for (i = 0; i < k; i++) {
+        for (i = 0; i < k; i++)
+        {
             counts[kmer[i]]++;
         }
         // calc probability
         double prob = 0;
-        for (auto const& [c, count] : counts) {
-            if (count == 0) {
+        for (auto const &[c, count] : counts)
+        {
+            if (count == 0)
+            {
                 continue;
             }
             prob += -log2(count / k) * (count / k);
