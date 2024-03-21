@@ -1,6 +1,5 @@
 #include <iostream>
 #include <fstream>
-#include <sstream>
 #include <unistd.h> // for getopt
 #include <set>
 #include <cstdlib> // for rand() and srand()
