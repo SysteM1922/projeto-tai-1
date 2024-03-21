@@ -60,27 +60,40 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // Open the input file
+    // get size of the file
     ifstream inputFile(inputFileName);
     if (!inputFile) {
-        cerr << "Error: cannot open " << inputFileName << endl;
+        cerr << "Error: Could not open input file.\n";
+        return 1;
+    }
+    
+    //fileSize is the size of the file
+    inputFile.seekg(0, ios::end);
+    int fileSize = inputFile.tellg();
+    inputFile.seekg(0, ios::beg);
+
+    // read the file into memory
+    char *fileData =  (char*)malloc(fileSize * sizeof(char));
+    if (fileData == NULL) {
+        cerr << "Error: Could not allocate memory for file data.\n";
         return 1;
     }
 
-    // Unordered set to store the unique letters in the input file
+    if (!inputFile.read(fileData, fileSize)) {
+        cerr << "Error: Could not read input file.\n";
+        return 1;
+    }
+    inputFile.close();
+
+    //set to store the unique letters in the input file
     set<char> letters;
 
-    // Read the input file character by character and populate the set of unique letters
-    char ch;
-    while (inputFile.get(ch)) {
-        letters.insert(ch);
+    //populate the set of unique letters
+    for (int i = 0; i < fileSize; i++) {
+        letters.insert(fileData[i]);
     }
 
-    // Reset the file pointer to the beginning of the file
-    inputFile.clear(); // Clear any error flags
-    inputFile.seekg(0, ios::beg); // Move file pointer to the beginning
-
-    // Seed the random number generator with current time
+    //seed the random number generator
     srand(time(nullptr));
 
     // Open the output file
@@ -90,18 +103,13 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // Read the input file character by character and perform mutation
-    while (inputFile.get(ch)) {
-        // Mutate the character
-        ch = mutateCharacter(ch, probability, letters);
-        
-        // Write the mutated character to the output file
-        outputFile << ch;
+    // Perform mutation on each character and write to the output file
+    for (int i = 0; i < fileSize; i++) {
+        outputFile << mutateCharacter(fileData[i], probability, letters);
     }
 
-    // Close the input and output files
-    inputFile.close();
+    // Close the output file
     outputFile.close();
-
+    
     return 0;
 }
