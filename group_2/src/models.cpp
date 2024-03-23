@@ -1,7 +1,7 @@
 #include <cmath>
 #include <set>
 #include <cstring>
-#include <map>
+#include <unordered_map>
 #include <iostream>
 
 #include "cpm.h"
@@ -30,25 +30,31 @@ struct Alphabet
         this->charMap = charMap;
     }
 
-    map<char, double> getCharMap()
+    unordered_map<char, double> getCharMap()
     {
         return charMap;
     }
 
     set<char> alphabet;
-    map<char, double> charMap;
+    unordered_map<char, double> charMap;
 };
 
 struct CopyModel
 {
 
-    char *kmer = NULL;
+    string kmer;
     char prediction = 0;
     double nHits = 0;
     int nTries = 0;
     int minTries;
     double threshold;
     int alphabetSize;
+
+    CopyModel(){
+        this->threshold = 0;
+        this->minTries = 0;
+        this->alphabetSize = 0;
+    }
 
     CopyModel(double threshold, int minTries, int alphabetSize)
     {
@@ -72,7 +78,7 @@ struct CopyModel
         return nTries > minTries && nHits / nTries < threshold;
     }
 
-    void addKmer(char *kmer, char prediction)
+    void addKmer(string kmer, char prediction)
     {
         this->kmer = kmer;
         this->prediction = prediction;
@@ -82,20 +88,20 @@ struct CopyModel
 
     void resetModel()
     {
-        this->kmer = NULL;
+        this->kmer.clear();
         this->prediction = 0;
         this->nHits = 0;
         this->nTries = 0;
     }
 
-    bool match(char *kmer)
+    bool match(string kmer)
     {
-        return this->kmer != NULL && strcmp(this->kmer, kmer) == 0;
+        return !this->kmer.empty() && this->kmer == kmer;
     }
 
     bool isNull()
     {
-        return this->kmer == NULL;
+        return this->kmer.empty();
     }
 
     double predict(char prediction)
@@ -126,11 +132,11 @@ struct FallbackModel
         this->alphabet = alphabet;
     }
 
-    double calcBits(char *kmer)
+    double calcBits(string kmer)
     {
         // calc relative frequency of each char in the kmer
         int i;
-        map<char, double> counts = this->alphabet.getCharMap();
+        unordered_map<char, double> counts = this->alphabet.getCharMap();
         for (i = 0; i < k; i++)
         {
             counts[kmer[i]]++;

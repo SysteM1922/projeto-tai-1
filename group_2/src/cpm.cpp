@@ -1,7 +1,10 @@
 #include <iostream>
 #include <chrono>
-#include <fstream>
-#include <cmath>
+#include <getopt.h>
+#include <cstdlib>
+#include <stack>
+#include <unordered_map>
+
 #include "table.cpp"
 #include "models.cpp"
 #include "cpm.h"
@@ -12,33 +15,57 @@ using namespace std::chrono;
 int main(int argc, char *argv[])
 {
 
-    FILE *inputfile;
-    int k;
+    FILE *inputfile = NULL;
+    int k = 0;
     double threshold;
     int minTries;
+    int n = 1;
+
+    stack<CopyModel> copyModelStack;
 
     double totalBits = 0;
     int fileSize = 0;
 
-    Table table;
     Alphabet alphabet;
 
-    if (argc < 4)
+    if (argc < 9)
     {
-        cerr << "Usage: cpm <input_file> <k> <threshold>" << endl;
+        cerr << "Usage: " << argv[0] << " -f <input_file> -k <kmer_size> -t <minTries/threshold> -n <nCopyModels>" << endl;
         return 1;
     }
 
-    inputfile = fopen(argv[1], "r");
-    if (inputfile == NULL)
+    int opt;
+    while ((opt = getopt(argc, argv, "f:k:t:n:")) != -1)
     {
-        cerr << "Error opening input file." << endl;
-        return 1;
+        switch (opt)
+        {
+        case 'f':
+            inputfile = fopen(optarg, "r");
+            if (inputfile == NULL)
+            {
+                cerr << "Error opening input file." << endl;
+                return 1;
+            }
+            break;
+        case 'k':
+            k = atoi(optarg);
+            break;
+        case 't':
+            sscanf(optarg, "%d/%lf", &minTries, &threshold);
+            break;
+        case 'n':
+            n = atoi(optarg);
+            break;
+        default:
+            cerr << "Usage: " << argv[0] << " -f <input_file> -k <kmer_size> -t <minTries/threshold> -n <nCopyModels>" << endl;
+            return 1;
+        }
     }
 
-    k = atoi(argv[2]);
-    // threshold is in format <minTries>/<threshold>
-    sscanf(argv[3], "%d/%lf", &minTries, &threshold);
+    
+    Table table = Table(k);
+    
+    unordered_map<string, CopyModel> copyModels;
 
     // start the timer
     auto start = high_resolution_clock::now();
@@ -71,15 +98,17 @@ int main(int argc, char *argv[])
     alphabet.loadCharMap();
 
     FallbackModel fallbackModel(k, alphabet);
-    
-    // for 1 CopyModel
-    CopyModel copyModel = CopyModel(threshold, minTries, alphabet.size());
 
-    char kmer[k];
-    // fill kmer with th first character
+    for (i = 0; i < n; i++)
+    {
+        copyModelStack.push(CopyModel(threshold, minTries, alphabet.size()));
+    }
+
+    char window[k];
+    // fill kmer with the first character
     for (i = 0; i < k; i++)
     {
-        kmer[i] = data[0];
+        window[i] = data[0];
     }
 
     int j;
@@ -87,43 +116,50 @@ int main(int argc, char *argv[])
     {
         for (j = 0; j < k - 1; j++)
         {
-            kmer[j] = kmer[j + 1];
+            window[j] = window[j + 1];
         }
-        kmer[k - 1] = data[i - 1];
+        window[k - 1] = data[i - 1];
+
+        string kmer(window);
 
         if (table.contains(kmer))
         {
-            if (copyModel.match(kmer))
+            if (copyModels.find(kmer) != copyModels.end())
             {
-                if (copyModel.thresholdReached())
+                if (copyModels[kmer].thresholdReached())
                 {
-                    copyModel.resetModel();
+                    copyModels[kmer].resetModel();
+                    copyModelStack.push(copyModels[kmer]);
+                    copyModels.erase(kmer);
                     table.advancePosition(kmer);
                 }
                 else
                 {
-                    totalBits += copyModel.predict(data[i]);
+                    totalBits += copyModels[kmer].predict(data[i]);
                 
-                    table.insert(kmer, i);
+                    table.insert(kmer, data[i]);
                     continue;
                 }
             }
-            else if (copyModel.isNull())
+            else if (copyModelStack.size() > 0)
             {
-                copyModel.addKmer(kmer, data[table.getPosition(kmer)]);
-                totalBits += copyModel.predict(data[i]);
-                table.insert(kmer, i);
+                copyModels[kmer] = copyModelStack.top();
+                copyModelStack.pop();
+                copyModels[kmer].addKmer(kmer, table.getCurrentElement(kmer));
+                totalBits += copyModels[kmer].predict(data[i]);
+                table.insert(kmer, data[i]);
                 continue;
             }
         }
         totalBits += fallbackModel.calcBits(kmer);
-        table.insert(kmer, i);
+        table.insert(kmer, data[i]);
     }
 
     auto stop = high_resolution_clock::now();
     auto duration = duration_cast<microseconds>(stop - start);
     
-    cout << "File: " << argv[1] << endl;
+    cout << "Copy Models: " << n << endl;
+    cout << "File: " << argv[2] << endl;
     cout << "k: " << k << endl;
     cout << "Threshold: " << threshold << endl;
     cout << "MinTries: " << minTries << endl;

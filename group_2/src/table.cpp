@@ -1,21 +1,24 @@
-#include <map>
+#include <unordered_map>
 #include <vector>
+#include <string>
+#include <cstdlib>
+#include <cstdio>
 
 using namespace std;
 
 struct Value
 {
     int idx = 0;
-    vector<int> values;
+    vector<char> values;
 
     Value() {}
 
-    Value(int value)
+    Value(char value)
     {
         values.push_back(value);
     }
 
-    void addValue(int value)
+    void addValue(char value)
     {
         values.push_back(value);
     }
@@ -25,7 +28,7 @@ struct Value
         return values.size();
     }
 
-    int getPosition()
+    char getCurrentElement()
     {
         if (idx >= static_cast<int>(values.size()))
         {
@@ -34,7 +37,7 @@ struct Value
         return values[idx];
     }
 
-    vector<int> getValues()
+    vector<char> getValues()
     {
         return values;
     }
@@ -48,9 +51,15 @@ struct Value
 struct Table
 {
     // map char array to Value
-    map<char *, Value> table;
+    unordered_map<string, Value> table;
+    int k;
 
-    void insert(char *key, int value)
+    Table(int k)
+    {
+        this->k = k;
+    }
+
+    void insert(string key, char value)
     {
         if (table.find(key) == table.end())
         {
@@ -62,18 +71,18 @@ struct Table
         }
     }
 
-    bool contains(char *key)
+    bool contains(string key)
     {
         return table.find(key) != table.end();
     }
 
-    void advancePosition(char *key)
+    void advancePosition(string key)
     {
         table[key].advancePosition();
     }
 
-    int getPosition(char *key)
+    char getCurrentElement(string kmer)
     {
-        return table[key].getPosition();
+        return table[kmer].getCurrentElement();
     }
 };
