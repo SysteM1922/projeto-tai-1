@@ -4,8 +4,6 @@
 #include <unordered_map>
 #include <iostream>
 
-#include "cpm.h"
-
 using namespace std;
 
 struct Alphabet
@@ -21,28 +19,14 @@ struct Alphabet
         return alphabet.size();
     }
 
-    void loadCharMap()
-    {
-        for (char c : alphabet)
-        {
-            charMap[c] = 0;
-        }
-        this->charMap = charMap;
-    }
-
-    unordered_map<char, double> getCharMap()
-    {
-        return charMap;
-    }
-
     set<char> alphabet;
-    unordered_map<char, double> charMap;
 };
 
 struct CopyModel
 {
 
     string kmer;
+    double alpha = 0;
     char prediction = 0;
     double nHits = 0;
     int nTries = 0;
@@ -56,16 +40,17 @@ struct CopyModel
         this->alphabetSize = 0;
     }
 
-    CopyModel(double threshold, int minTries, int alphabetSize)
+    CopyModel(double threshold, int minTries, int alphabetSize, double alpha)
     {
         this->threshold = threshold;
         this->minTries = minTries;
         this->alphabetSize = alphabetSize;
+        this->alpha = alpha;
     }
 
     double calcProb()
     {
-        return (nHits + ALPHA) / (nTries + ALPHA * 2);
+        return (nHits + alpha) / (nTries + alpha * 2);
     }
 
     double calcBits()
@@ -122,35 +107,52 @@ struct CopyModel
 
 struct FallbackModel
 {
-
+    char *data;
     int k;
     Alphabet alphabet;
+    unordered_map<char, double> counts;
 
-    FallbackModel(int k, Alphabet alphabet)
+    FallbackModel(char *&data, int k, Alphabet alphabet)
     {
+        this->data = data;
         this->k = k;
         this->alphabet = alphabet;
+        for (auto &c : alphabet.alphabet)
+        {
+            counts[c] = 0;
+        }
     }
 
-    double calcBits(string kmer)
+    void advancePosition(int i)
     {
-        // calc relative frequency of each char in the kmer
-        int i;
-        unordered_map<char, double> counts = this->alphabet.getCharMap();
-        for (i = 0; i < k; i++)
+        if (i > 199)
         {
-            counts[kmer[i]]++;
+            counts[data[i - 200]]--;
+            counts[data[i]]++;
         }
-        // calc probability
-        double prob = 0;
-        for (auto const &[c, count] : counts)
+        else
         {
-            if (count == 0)
+            counts[data[i]]++;
+        }
+    }
+
+    double calcBits(int i)
+    {
+        int size = 200;
+        if (i < 199)
+        {
+            size = i+1;
+        }
+        
+        double bits = 0;
+        for (auto &c : counts)
+        {
+            double p = c.second / size;
+            if (p > 0)
             {
-                continue;
+                bits -= p * log2(p);
             }
-            prob += -log2(count / k) * (count / k);
         }
-        return prob;
+        return bits;
     }
 };

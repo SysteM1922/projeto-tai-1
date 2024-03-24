@@ -7,7 +7,6 @@
 
 #include "table.cpp"
 #include "models.cpp"
-#include "cpm.h"
 
 using namespace std;
 using namespace std::chrono;
@@ -20,6 +19,7 @@ int main(int argc, char *argv[])
     double threshold;
     int minTries;
     int n = 1;
+    double alpha = 0;
 
     stack<CopyModel> copyModelStack;
 
@@ -28,14 +28,14 @@ int main(int argc, char *argv[])
 
     Alphabet alphabet;
 
-    if (argc < 9)
+    if (argc < 11)
     {
-        cerr << "Usage: " << argv[0] << " -f <input_file> -k <kmer_size> -t <minTries/threshold> -n <nCopyModels>" << endl;
+        cerr << "Usage: " << argv[0] << " -f <input_file> -k <kmer_size> -t <minTries/threshold> -n <nCopyModels> -a <alpha>" << endl;
         return 1;
     }
 
     int opt;
-    while ((opt = getopt(argc, argv, "f:k:t:n:")) != -1)
+    while ((opt = getopt(argc, argv, "f:k:t:n:a:")) != -1)
     {
         switch (opt)
         {
@@ -55,6 +55,9 @@ int main(int argc, char *argv[])
             break;
         case 'n':
             n = atoi(optarg);
+            break;
+        case 'a':
+            alpha = atof(optarg);
             break;
         default:
             cerr << "Usage: " << argv[0] << " -f <input_file> -k <kmer_size> -t <minTries/threshold> -n <nCopyModels>" << endl;
@@ -95,13 +98,12 @@ int main(int argc, char *argv[])
     {
         alphabet.add(data[i]);
     }
-    alphabet.loadCharMap();
 
-    FallbackModel fallbackModel(k, alphabet);
+    FallbackModel fallbackModel(data, k, alphabet);
 
     for (i = 0; i < n; i++)
     {
-        copyModelStack.push(CopyModel(threshold, minTries, alphabet.size()));
+        copyModelStack.push(CopyModel(threshold, minTries, alphabet.size(), alpha));
     }
 
     char window[k];
@@ -138,6 +140,7 @@ int main(int argc, char *argv[])
                     totalBits += copyModels[kmer].predict(data[i]);
                 
                     table.insert(kmer, data[i]);
+                    fallbackModel.advancePosition(i-1);
                     continue;
                 }
             }
@@ -148,10 +151,12 @@ int main(int argc, char *argv[])
                 copyModels[kmer].addKmer(kmer, table.getCurrentElement(kmer));
                 totalBits += copyModels[kmer].predict(data[i]);
                 table.insert(kmer, data[i]);
+                fallbackModel.advancePosition(i-1);
                 continue;
             }
         }
-        totalBits += fallbackModel.calcBits(kmer);
+        fallbackModel.advancePosition(i-1);
+        totalBits += fallbackModel.calcBits(i-1);
         table.insert(kmer, data[i]);
     }
 
