@@ -13,7 +13,7 @@ char mutateCharacter(char ch, double probability, const unordered_set<char>& let
     // Generate a random value between 0 and 1
     double randomValue = (double)rand() / RAND_MAX;
 
-    // If the random value is greater than the probability, replace the current character
+    // If the probability is greater than the random value, replace the current character
     if (randomValue < probability) {
         // Select a random letter from the set of unique letters
         int randomIndex = rand() % letters.size();
