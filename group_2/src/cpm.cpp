@@ -2,7 +2,6 @@
 #include <chrono>
 #include <getopt.h>
 #include <cstdlib>
-#include <stack>
 #include <unordered_map>
 
 #include "table.cpp"
@@ -20,8 +19,6 @@ int main(int argc, char *argv[])
     int minTries;
     int n = 1;
     double alpha = 0;
-
-    stack<CopyModel> copyModelStack;
 
     double totalBits = 0;
     int fileSize = 0;
@@ -60,15 +57,13 @@ int main(int argc, char *argv[])
             alpha = atof(optarg);
             break;
         default:
-            cerr << "Usage: " << argv[0] << " -f <input_file> -k <kmer_size> -t <minTries/threshold> -n <nCopyModels>" << endl;
+            cerr << "Usage: " << argv[0] << " -f <input_file> -k <kmer_size> -t <minTries/threshold> -n <nCopyModels> -a <alpha>" << endl;
             return 1;
         }
     }
 
     
     Table table = Table(k);
-    
-    unordered_map<string, CopyModel> copyModels;
 
     // start the timer
     auto start = high_resolution_clock::now();
@@ -101,13 +96,10 @@ int main(int argc, char *argv[])
 
     FallbackModel fallbackModel(data, k, alphabet);
 
-    for (i = 0; i < n; i++)
-    {
-        copyModelStack.push(CopyModel(threshold, minTries, alphabet.size(), alpha));
-    }
+    CopyModel copyModel = CopyModel(threshold, minTries, alphabet.size(), alpha);
 
     char window[k];
-    // fill kmer with the first character
+
     for (i = 0; i < k; i++)
     {
         window[i] = data[0];
@@ -126,30 +118,26 @@ int main(int argc, char *argv[])
 
         if (table.contains(kmer))
         {
-            if (copyModels.find(kmer) != copyModels.end())
+            if (copyModel.match(kmer))
             {
-                if (copyModels[kmer].thresholdReached())
+                if (copyModel.thresholdReached())
                 {
-                    copyModels[kmer].resetModel();
-                    copyModelStack.push(copyModels[kmer]);
-                    copyModels.erase(kmer);
+                    copyModel.resetModel();
                     table.advancePosition(kmer);
                 }
                 else
                 {
-                    totalBits += copyModels[kmer].predict(data[i]);
+                    totalBits += copyModel.predict(data[i]);
                 
                     table.insert(kmer, data[i]);
                     fallbackModel.advancePosition(i-1);
                     continue;
                 }
             }
-            else if (copyModelStack.size() > 0)
+            else
             {
-                copyModels[kmer] = copyModelStack.top();
-                copyModelStack.pop();
-                copyModels[kmer].addKmer(kmer, table.getCurrentElement(kmer));
-                totalBits += copyModels[kmer].predict(data[i]);
+                copyModel.addKmer(kmer, table.getCurrentElement(kmer));
+                totalBits += copyModel.predict(data[i]);
                 table.insert(kmer, data[i]);
                 fallbackModel.advancePosition(i-1);
                 continue;

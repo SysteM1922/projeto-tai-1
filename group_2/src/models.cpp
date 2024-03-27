@@ -125,9 +125,9 @@ struct FallbackModel
 
     void advancePosition(int i)
     {
-        if (i > 199)
+        if (i > 499)
         {
-            counts[data[i - 200]]--;
+            counts[data[i - 500]]--;
             counts[data[i]]++;
         }
         else
@@ -138,8 +138,8 @@ struct FallbackModel
 
     double calcBits(int i)
     {
-        int size = 200;
-        if (i < 199)
+        int size = 500;
+        if (i < 499)
         {
             size = i+1;
         }
