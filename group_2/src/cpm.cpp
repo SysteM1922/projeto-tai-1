@@ -104,9 +104,12 @@ int main(int argc, char *argv[])
 
     string kmer(k, data[0]);
 
+    bool match;
+
     int j;
     for (i = 1; i < fileSize; i++)
     {
+        match = true;
         for (j = 0; j < k - 1; j++)
         {
             kmer[j] = kmer[j + 1];
@@ -115,32 +118,34 @@ int main(int argc, char *argv[])
 
         if (table.contains(kmer))
         {
-            if (copyModel.match(kmer))
+            if (copyModel.isActive())
             {
-                if (!copyModel.isActive())
+                if (copyModel.match(kmer))
                 {
-                    printf("Error: Copy model is not active.\n");
-                    copyModel.resetModel();
-                    table.advancePosition(kmer);
-                }
-                else
-                {
-                    totalBits += copyModel.predict(data[i]);
+                    totalBits += copyModel.predict(data[i], kmer);
 
                     table.insert(kmer, data[i]);
                     fallbackModel.advancePosition(i - 1);
 
                     if (!copyModel.isFull())
                     {
-                        copyModel.addReference(table.getCurrentElement(kmer));
+                        copyModel.addReference(kmer, table.getCurrentElement(kmer));
                     }
                     continue;
                 }
+                match = false;
+            }
+            else if (match && copyModel.match(kmer))
+            {
+                copyModel.resetModel();
+                table.advancePosition(kmer);
             }
             else if (copyModel.isNull() || !copyModel.isActive())
             {
-                copyModel.newReferences(kmer, table.getCurrentElement(kmer));
-                totalBits += copyModel.predict(data[i]);
+                copyModel.resetModel();
+                table.advancePosition(kmer);
+                copyModel.addReference(kmer, table.getCurrentElement(kmer));
+                totalBits += copyModel.predict(data[i], kmer);
                 table.insert(kmer, data[i]);
                 fallbackModel.advancePosition(i - 1);
                 continue;
@@ -155,6 +160,7 @@ int main(int argc, char *argv[])
     auto duration = duration_cast<microseconds>(stop - start);
 
     cout << "Copy Models: " << n << endl;
+    cout << "Alpha: " << alpha << endl;
     cout << "File: " << argv[2] << endl;
     cout << "k: " << k << endl;
     cout << "Threshold: " << threshold << endl;

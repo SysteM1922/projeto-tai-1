@@ -1,9 +1,9 @@
 #include <cmath>
 #include <set>
-#include <cstring>
 #include <unordered_map>
 #include <iostream>
 #include <vector>
+#include <string>
 
 using namespace std;
 
@@ -25,24 +25,30 @@ struct Alphabet
 
 struct Reference
 {
+    string kmer;
     char prediction = 0;
     double nHits = 0;
     int nTries = 0;
-    double alpha = 0;
-    double threshold = 0;
-    int minTries = 0;
+    double alpha;
+    double threshold;
+    int minTries;
     bool activated = true;
-    int alphabetSize = 0;
+    int alphabetSize;
+    int goal;
+    int k;
 
     Reference() {}
 
-    Reference(double threshold, int minTries, int alphabetSize, double alpha, int k, char prediction)
+    Reference(string kmer, double threshold, int minTries, int alphabetSize, double alpha, char prediction, int goal, int k)
     {
+        this->kmer = kmer;
         this->threshold = threshold;
         this->minTries = minTries;
         this->alphabetSize = alphabetSize;
         this->alpha = alpha;
         this->prediction = prediction;
+        this->goal = goal;
+        this->k = k;
     }
 
     double calcProb()
@@ -55,35 +61,47 @@ struct Reference
         return nTries > minTries && nHits / nTries < threshold;
     }
 
-    bool isActivate()
+    bool isActive()
     {
         return activated;
     }
 
     void deactivate()
     {
-        activated = false;
+        this->activated = false;
     }
 
     double predict(char prediction)
     {
+        this->nTries++;
         if (prediction == this->prediction)
         {
             this->nHits++;
-            this->nTries++;
             return calcProb();
         }
-        else
+        return (1 - calcProb()) / (this->alphabetSize - 1);
+    }
+
+    bool match(string kmer)
+    {
+        for (int i = 0; i < k - goal + 1; i++)
         {
-            this->nTries++;
-            return (1 - calcProb()) / (this->alphabetSize - 1);
+            if (this->kmer.find(kmer.substr(i, goal)) != string::npos)
+            {
+                return true;
+            }
         }
+        return false;
+    }
+
+    bool isNull()
+    {
+        return this->kmer.empty();
     }
 };
 
 struct CopyModel
 {
-    string kmer;
     unsigned long int n;
     vector<Reference> references;
     double alpha = 0;
@@ -101,100 +119,81 @@ struct CopyModel
         this->minTries = minTries;
         this->alphabetSize = alphabetSize;
         this->alpha = alpha;
-        this->references = vector<Reference>();
         this->n = n;
         this->goal = goal;
         this->k = k;
     }
 
-    void newReferences(string kmer, char prediction)
+    void addReference(string kmer, char prediction)
     {
-        this->kmer = kmer;
-        addReference(prediction);
-    }
-
-    void addReference(char prediction)
-    {
-        this->references.push_back(Reference(threshold, minTries, alphabetSize, alpha, kmer.size(), prediction));
+        this->references.push_back(Reference(kmer, threshold, minTries, alphabetSize, alpha, prediction, goal, k));
     }
 
     void resetModel()
     {
-        this->kmer.clear();
         this->references.clear();
-    }
-
-    bool match(string kmer)
-    {
-        int match = 0;
-        unsigned long int i, j, l;
-        unsigned long int goal = this->goal;
-        for (i = 0; i < k - goal; i++)
-        {
-            for (j = i; j < k - goal; j++)
-            {
-                if (kmer[i] == this->kmer[j])
-                {
-                    match++;
-                    for (l = 1; l < goal; l++)
-                    {
-                        if (kmer[i + l] != this->kmer[j + l])
-                        {
-                            break;
-                        }
-                        match++;
-                        if (match == this->goal)
-                        {
-                            return true;
-                        }
-                    }
-                }
-                else
-                {
-                    match = 0;
-                }
-            }
-            match = 0;
-        }
-        return false;
     }
 
     bool isNull()
     {
-        return this->kmer.empty();
+        for (Reference ref : references)
+        {
+            if (!ref.isNull())
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    bool match(string kmer)
+    {
+        for (Reference ref : references)
+        {
+            if (ref.isActive() && ref.match(kmer))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     bool isActive()
     {
         bool ret = false;
-        for (auto ref : references)
+        for (Reference &ref : references)
         {
-            if (ref.isActivate() && ref.thresholdReached())
+            if (ref.isActive())
             {
-                ref.deactivate();
-                continue;
+                if (ref.thresholdReached())
+                {
+                    ref.deactivate();
+                    continue;
+                }
+                ret = true;
             }
-            ret = true;
         }
         return ret;
     };
 
-    double predict(char prediction)
+    double predict(char prediction, string kmer)
     {
         double prob = 0;
-        for (auto ref : references)
+        int size = 0;
+        for (Reference &ref : this->references)
         {
-            if (ref.isActivate())
+            if (ref.isActive() && ref.match(kmer))
             {
                 prob += ref.predict(prediction);
+                size++;
             }
         }
-        return -log2(prob / references.size());
+        return -log2(prob / size);
     }
 
     bool isFull()
     {
-        return references.size() == n;
+        return this->references.size() >= n;
     }
 };
 

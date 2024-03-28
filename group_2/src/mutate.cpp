@@ -42,14 +42,14 @@ int main(int argc, char* argv[]) {
                 probability = stod(optarg);
                 break;
             default:
-                cerr << "Usage: " << argv[0] << " -i inputFileName -o outputFileName -p probability\n";
+                cerr << "Usage: " << argv[0] << " -i <inputFileName> -o <outputFileName> -p <probability>\n";
                 return 1;
         }
     }
 
     // Check if input file, output file, and probability are provided
     if (inputFileName.empty() || outputFileName.empty() || probability == 0) {
-        cerr << "Usage: " << argv[0] << " -i input_file -o output_file -p probability\n";
+        cerr << "Usage: " << argv[0] << " -i <input_file> -o <output_file> -p <probability>\n";
         return 1;
     }
 
