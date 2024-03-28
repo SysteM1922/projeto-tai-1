@@ -100,7 +100,7 @@ int main(int argc, char *argv[])
 
     FallbackModel fallbackModel(data, k, alphabet, fallbackWindowSize);
 
-    CopyModel copyModel = CopyModel(threshold, minTries, alphabet.size(), alpha, n, goal);
+    CopyModel copyModel = CopyModel(threshold, minTries, alphabet.size(), alpha, n, goal, k);
 
     string kmer(k, data[0]);
 

@@ -91,10 +91,11 @@ struct CopyModel
     int minTries = 0;
     double threshold = 0;
     int goal = 0;
+    int k = 0;
 
     CopyModel() {}
 
-    CopyModel(double threshold, int minTries, int alphabetSize, double alpha, int n, int goal)
+    CopyModel(double threshold, int minTries, int alphabetSize, double alpha, int n, int goal, int k)
     {
         this->threshold = threshold;
         this->minTries = minTries;
@@ -103,6 +104,7 @@ struct CopyModel
         this->references = vector<Reference>();
         this->n = n;
         this->goal = goal;
+        this->k = k;
     }
 
     void newReferences(string kmer, char prediction)
@@ -125,21 +127,34 @@ struct CopyModel
     bool match(string kmer)
     {
         int match = 0;
-        unsigned long int i;
-        for (i = 0; i < n; i++)
+        unsigned long int i, j, l;
+        unsigned long int goal = this->goal;
+        for (i = 0; i < k - goal; i++)
         {
-            if (kmer[i] == this->kmer[i])
+            for (j = i; j < k - goal; j++)
             {
-                match++;
-                if (match == this->goal)
+                if (kmer[i] == this->kmer[j])
                 {
-                    return true;
+                    match++;
+                    for (l = 1; l < goal; l++)
+                    {
+                        if (kmer[i + l] != this->kmer[j + l])
+                        {
+                            break;
+                        }
+                        match++;
+                        if (match == this->goal)
+                        {
+                            return true;
+                        }
+                    }
+                }
+                else
+                {
+                    match = 0;
                 }
             }
-            else
-            {
-                match = 0;
-            }
+            match = 0;
         }
         return false;
     }
@@ -152,7 +167,7 @@ struct CopyModel
     bool isActive()
     {
         bool ret = false;
-        for (auto ref: references)
+        for (auto ref : references)
         {
             if (ref.isActivate() && ref.thresholdReached())
             {
@@ -167,12 +182,11 @@ struct CopyModel
     double predict(char prediction)
     {
         double prob = 0;
-        for (auto ref: references)
+        for (auto ref : references)
         {
             if (ref.isActivate())
             {
-                double prob1 = ref.predict(prediction);
-                prob += prob1;
+                prob += ref.predict(prediction);
             }
         }
         return -log2(prob / references.size());
@@ -232,7 +246,6 @@ struct FallbackModel
             {
                 bits -= p * log2(p);
             }
-
         }
         return bits;
     }
