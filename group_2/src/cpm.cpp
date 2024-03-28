@@ -24,16 +24,18 @@ int main(int argc, char *argv[])
     double totalBits = 0;
     int fileSize = 0;
 
+    int goal = 0;
+
     Alphabet alphabet;
 
-    if (argc < 13)
+    if (argc < 15)
     {
-        cerr << "Usage: " << argv[0] << " -f <input_file> -k <kmer_size> -t <minTries/threshold> -n <nCopyModels> -s <fallback_window_size -a <alpha>" << endl;
+        cerr << "Usage: " << argv[0] << " -f <input_file> -k <kmer_size> -t <minTries/threshold> -n <nCopyModels> -s <fallback_window_size -m <size_of_sequence_to_match> -a <alpha>" << endl;
         return 1;
     }
 
     int opt;
-    while ((opt = getopt(argc, argv, "f:k:t:n:s:a:")) != -1)
+    while ((opt = getopt(argc, argv, "f:k:t:n:s:m:a:")) != -1)
     {
         switch (opt)
         {
@@ -60,23 +62,23 @@ int main(int argc, char *argv[])
         case 's':
             fallbackWindowSize = atoi(optarg);
             break;
+        case 'm':
+            goal = atoi(optarg);
+            break;
         default:
-            cerr << "Usage: " << argv[0] << " -f <input_file> -k <kmer_size> -t <minTries/threshold> -n <nCopyModels> -s <fallback_window_size -a <alpha>" << endl;
+            cerr << "Usage: " << argv[0] << " -f <input_file> -k <kmer_size> -t <minTries/threshold> -n <nCopyModels> -s <fallback_window_size -m <size_of_sequence_to_match> -a <alpha>" << endl;
             return 1;
         }
     }
 
     Table table = Table(k);
 
-    // start the timer
     auto start = high_resolution_clock::now();
 
-    // Get the size of the file
     fseek(inputfile, 0, SEEK_END);
     fileSize = ftell(inputfile);
     fseek(inputfile, 0, SEEK_SET);
 
-    // Read the file into memory
     char *data = (char *)malloc(fileSize * sizeof(char));
     if (data == NULL)
     {
@@ -90,7 +92,6 @@ int main(int argc, char *argv[])
     }
     fclose(inputfile);
 
-    // Compute the alphabet
     int i;
     for (i = 0; i < fileSize; i++)
     {
@@ -99,7 +100,7 @@ int main(int argc, char *argv[])
 
     FallbackModel fallbackModel(data, k, alphabet, fallbackWindowSize);
 
-    CopyModel copyModel = CopyModel(threshold, minTries, alphabet.size(), alpha, n);
+    CopyModel copyModel = CopyModel(threshold, minTries, alphabet.size(), alpha, n, goal);
 
     string kmer(k, data[0]);
 
@@ -118,6 +119,7 @@ int main(int argc, char *argv[])
             {
                 if (!copyModel.isActive())
                 {
+                    printf("Error: Copy model is not active.\n");
                     copyModel.resetModel();
                     table.advancePosition(kmer);
                 }
@@ -157,6 +159,8 @@ int main(int argc, char *argv[])
     cout << "k: " << k << endl;
     cout << "Threshold: " << threshold << endl;
     cout << "MinTries: " << minTries << endl;
+    cout << "Fallback window size: " << fallbackWindowSize << endl;
+    cout << "Match size: " << goal << endl;
     cout << "File size (Bases): " << fileSize << endl;
     cout << "Alphabet size: " << alphabet.size() << endl;
     cout << "Total bytes (B): " << (int)(totalBits / 8) << endl;

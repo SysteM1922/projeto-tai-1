@@ -90,10 +90,11 @@ struct CopyModel
     int alphabetSize = 0;
     int minTries = 0;
     double threshold = 0;
+    int goal = 0;
 
     CopyModel() {}
 
-    CopyModel(double threshold, int minTries, int alphabetSize, double alpha, int n)
+    CopyModel(double threshold, int minTries, int alphabetSize, double alpha, int n, int goal)
     {
         this->threshold = threshold;
         this->minTries = minTries;
@@ -101,6 +102,7 @@ struct CopyModel
         this->alpha = alpha;
         this->references = vector<Reference>();
         this->n = n;
+        this->goal = goal;
     }
 
     void newReferences(string kmer, char prediction)
@@ -122,7 +124,24 @@ struct CopyModel
 
     bool match(string kmer)
     {
-        return !this->kmer.empty() && this->kmer == kmer;
+        int match = 0;
+        unsigned long int i;
+        for (i = 0; i < n; i++)
+        {
+            if (kmer[i] == this->kmer[i])
+            {
+                match++;
+                if (match == this->goal)
+                {
+                    return true;
+                }
+            }
+            else
+            {
+                match = 0;
+            }
+        }
+        return false;
     }
 
     bool isNull()
