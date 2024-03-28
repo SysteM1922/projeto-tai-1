@@ -50,7 +50,6 @@ struct Value
 
 struct Table
 {
-    // map char array to Value
     unordered_map<string, Value> table;
     int k;
 

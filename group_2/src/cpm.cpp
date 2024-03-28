@@ -19,20 +19,21 @@ int main(int argc, char *argv[])
     int minTries;
     int n = 1;
     double alpha = 0;
+    int fallbackWindowSize = 0;
 
     double totalBits = 0;
     int fileSize = 0;
 
     Alphabet alphabet;
 
-    if (argc < 11)
+    if (argc < 13)
     {
-        cerr << "Usage: " << argv[0] << " -f <input_file> -k <kmer_size> -t <minTries/threshold> -n <nCopyModels> -a <alpha>" << endl;
+        cerr << "Usage: " << argv[0] << " -f <input_file> -k <kmer_size> -t <minTries/threshold> -n <nCopyModels> -s <fallback_window_size -a <alpha>" << endl;
         return 1;
     }
 
     int opt;
-    while ((opt = getopt(argc, argv, "f:k:t:n:a:")) != -1)
+    while ((opt = getopt(argc, argv, "f:k:t:n:s:a:")) != -1)
     {
         switch (opt)
         {
@@ -56,13 +57,15 @@ int main(int argc, char *argv[])
         case 'a':
             alpha = atof(optarg);
             break;
+        case 's':
+            fallbackWindowSize = atoi(optarg);
+            break;
         default:
-            cerr << "Usage: " << argv[0] << " -f <input_file> -k <kmer_size> -t <minTries/threshold> -n <nCopyModels> -a <alpha>" << endl;
+            cerr << "Usage: " << argv[0] << " -f <input_file> -k <kmer_size> -t <minTries/threshold> -n <nCopyModels> -s <fallback_window_size -a <alpha>" << endl;
             return 1;
         }
     }
 
-    
     Table table = Table(k);
 
     // start the timer
@@ -94,33 +97,26 @@ int main(int argc, char *argv[])
         alphabet.add(data[i]);
     }
 
-    FallbackModel fallbackModel(data, k, alphabet);
+    FallbackModel fallbackModel(data, k, alphabet, fallbackWindowSize);
 
-    CopyModel copyModel = CopyModel(threshold, minTries, alphabet.size(), alpha);
+    CopyModel copyModel = CopyModel(threshold, minTries, alphabet.size(), alpha, n);
 
-    char window[k];
-
-    for (i = 0; i < k; i++)
-    {
-        window[i] = data[0];
-    }
+    string kmer(k, data[0]);
 
     int j;
     for (i = 1; i < fileSize; i++)
     {
         for (j = 0; j < k - 1; j++)
         {
-            window[j] = window[j + 1];
+            kmer[j] = kmer[j + 1];
         }
-        window[k - 1] = data[i - 1];
-
-        string kmer(window);
+        kmer[k - 1] = data[i - 1];
 
         if (table.contains(kmer))
         {
             if (copyModel.match(kmer))
             {
-                if (copyModel.thresholdReached())
+                if (!copyModel.isActive())
                 {
                     copyModel.resetModel();
                     table.advancePosition(kmer);
@@ -128,29 +124,34 @@ int main(int argc, char *argv[])
                 else
                 {
                     totalBits += copyModel.predict(data[i]);
-                
+
                     table.insert(kmer, data[i]);
-                    fallbackModel.advancePosition(i-1);
+                    fallbackModel.advancePosition(i - 1);
+
+                    if (!copyModel.isFull())
+                    {
+                        copyModel.addReference(table.getCurrentElement(kmer));
+                    }
                     continue;
                 }
             }
-            else
+            else if (copyModel.isNull() || !copyModel.isActive())
             {
-                copyModel.addKmer(kmer, table.getCurrentElement(kmer));
+                copyModel.newReferences(kmer, table.getCurrentElement(kmer));
                 totalBits += copyModel.predict(data[i]);
                 table.insert(kmer, data[i]);
-                fallbackModel.advancePosition(i-1);
+                fallbackModel.advancePosition(i - 1);
                 continue;
             }
         }
-        fallbackModel.advancePosition(i-1);
-        totalBits += fallbackModel.calcBits(i-1);
+        fallbackModel.advancePosition(i - 1);
+        totalBits += fallbackModel.calcBits(data[i]);
         table.insert(kmer, data[i]);
     }
 
     auto stop = high_resolution_clock::now();
     auto duration = duration_cast<microseconds>(stop - start);
-    
+
     cout << "Copy Models: " << n << endl;
     cout << "File: " << argv[2] << endl;
     cout << "k: " << k << endl;
