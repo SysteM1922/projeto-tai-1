@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    Table table = Table(k);
+    Table table = Table();
 
     auto start = high_resolution_clock::now();
 

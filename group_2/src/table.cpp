@@ -51,12 +51,6 @@ struct Value
 struct Table
 {
     unordered_map<string, Value> table;
-    int k;
-
-    Table(int k)
-    {
-        this->k = k;
-    }
 
     void insert(string key, char value)
     {
