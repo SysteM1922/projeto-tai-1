@@ -1,1 +1,0 @@
-c++ -Wall -O3 mutate.cpp -o mutate -lm
